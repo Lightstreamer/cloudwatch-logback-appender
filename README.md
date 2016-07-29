@@ -1,59 +1,36 @@
-# Logback appenders for AWS
+# Logback appender for AWS CloudWatch
 
-## AwsLogsAppender
+## CloudWatch Logback Appender
 
 Send logs to Amazon CloudWatch Logs.
 
+The appender, internally, uses an asynchronous bounded FIFO log queue for CloudWatch communication.
+Data encoding and submission is managed using a dedicated thread.
+After data submission, if the log queue contains at least *minLogSize*, then new data is submitted immediately, else it waits for *maxLogSize* data in FIFO or for *logPollTimeMillis* timeout.
+
+## Build
+
+Run `mvn package` and replace files in `Lightstreamer/lib/log` with `target/dist`.
+
 ### Requirements:
  - Amazon IAM user with 'CloudWatchLogsFullAccess' (arn:aws:iam::aws:policy/CloudWatchLogsFullAccess) policy
-
-### Downlaod: [ ![Download](https://api.bintray.com/packages/bankmonitor/hu.bankmonitor.commons/logback-appenders/images/download.svg) ](https://bintray.com/bankmonitor/hu.bankmonitor.commons/logback-appenders/_latestVersion)
-
-### Maven:
-
-``` xml
-<repositories>
-	<repository>
-		<id>bintray-bankmonitor-hu.bankmonitor.commons</id>
-		<name>bintray</name>
-		<url>http://dl.bintray.com/bankmonitor/hu.bankmonitor.commons</url>
-		<snapshots>
-			<enabled>false</enabled>
-		</snapshots>
-	</repository>
-</repositories>
-
-<dependencies>
-	<dependency>
-		<groupId>hu.bankmonitor.commons</groupId>
-		<artifactId>logback-appenders</artifactId>
-		<version>0.0.8</version>
-		<exclusions>
-			<exclusion>
-				<artifactId>commons-logging</artifactId>
-				<groupId>commons-logging</groupId>
-			</exclusion>
-		</exclusions>
-	</dependency>
-</dependencies>
+ 
+ or
 ```
-
-If you use [jcl-over-slf4j](http://www.slf4j.org/legacy.html) then exclude `commons-logging`:
-
-``` xml
-<dependencies>
-	<dependency>
-		<groupId>hu.bankmonitor.commons</groupId>
-		<artifactId>logback-appenders</artifactId>
-		<version>0.0.8</version>
-		<exclusions>
-			<exclusion>
-				<artifactId>commons-logging</artifactId>
-				<groupId>commons-logging</groupId>
-			</exclusion>
-		</exclusions>
-	</dependency>
-</dependencies>
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:PutLogEvents"
+    ],
+      "Resource": [
+        "arn:aws:logs:eu-west-1:*:test-log-group:log-stream:*"
+    ]
+  }
+ ]
+}
 ```
 
 ### Usage:
@@ -62,12 +39,9 @@ If you use [jcl-over-slf4j](http://www.slf4j.org/legacy.html) then exclude `comm
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-	<appender name="AWS_LOGS" class="hu.bankmonitor.commons.logback.AwsLogsJsonAppender">
-		<awsAccessKey>yourAwsAccessKey</awsAccessKey>
-		<awsSecretKey>yourAwsSecretKey</awsSecretKey>
+	<appender name="AWS_LOGS" class="com.lightstreamer.cloudwatch.logback.appender.AwsLogsJsonAppender">
 		<awsRegionName>region</awsRegionName>
-		<logGroupName>log-group-name</logGroupName>
-		<logStreamName>log-stream-name</logStreamName>
+		<logGroupName>test-log-group</logGroupName>
 	</appender>
 
 	<root level="DEBUG">
@@ -82,8 +56,9 @@ If you use [jcl-over-slf4j](http://www.slf4j.org/legacy.html) then exclude `comm
 
 | Property      | Required  | Description                                        |
 | :------------ | :-------: | :------------------------------------------------- |
-| awsAccessKey  | yes       | AWS access key                                     |
-| awsSecretKey  | yes       | AWS secret key                                     |
-| awsRegionName | no        | CloudWatch region name. Default: US_WEST_2         |
-| logGroupName  | no        | CloudWatch log group name. Default: log-group-name |
-| logStreamName | no        | CloudWatch stream name. Default: log-stream-name   |
+| awsRegionName | no        | CloudWatch region name.                            |
+| logGroupName  | no        | CloudWatch log group name. Default: test-log-group |
+| logStreamName | no        | CloudWatch stream name. Default: hostName+timeStamp|
+| logPollTimeMillis | no    | Log polling time in milliseconds. Default: 3000    |
+| minLogSize    | no        | Min event for wait polling. Default: 128           |
+| maxLogSize    | no        | Max events in putLogEvents. Default: 1024          |
