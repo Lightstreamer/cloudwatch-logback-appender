@@ -6,11 +6,8 @@ Send logs to Amazon CloudWatch Logs.
 
 The appender, internally, uses an asynchronous bounded FIFO log queue for CloudWatch communication.
 Data encoding and submission is managed using a dedicated thread.
-After data submission, if the log queue contains at least *minLogSize*, then new data is submitted immediately, else it waits for *maxLogSize* data in FIFO or for *logPollTimeMillis* timeout.
-
-## Build
-
-Run `mvn package` and replace files in `Lightstreamer/lib/log` with `target/dist`.
+After data submission, if the log queue contains at least *minLogSize*, then new data is submitted immediately,
+else it waits for *maxLogSize* data in FIFO or for *logPollTimeMillis* timeout.
 
 ### Requirements:
  - Amazon IAM user with 'CloudWatchLogsFullAccess' (arn:aws:iam::aws:policy/CloudWatchLogsFullAccess) policy
