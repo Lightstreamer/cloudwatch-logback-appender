@@ -2,9 +2,8 @@ package com.lightstreamer.cloudwatch.logback.appender;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.logs.AWSLogsClient;
+import com.amazonaws.services.logs.AWSLogs;
+import com.amazonaws.services.logs.AWSLogsClientBuilder;
 import com.amazonaws.services.logs.model.*;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -21,7 +20,7 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
 
     private final ObjectMapper om;
 
-    private AWSLogsClient awsLogsClient;
+    private AWSLogs awsLogsClient;
 
     private String awsRegionName;
 
@@ -61,10 +60,11 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
             logStreamName = logStreamName.replace(':', '.');
         }
 
-        awsLogsClient = new AWSLogsClient();
+        final AWSLogsClientBuilder logsClientBuilder = AWSLogsClientBuilder.standard();
         if (awsRegionName != null) {
-            awsLogsClient.setRegion(Region.getRegion(Regions.fromName(awsRegionName)));
+            logsClientBuilder.setRegion(awsRegionName);
         }
+        awsLogsClient = logsClientBuilder.build();
 
         logEvents = new ArrayBlockingQueue<>(maxLogSize * 2);
     }
@@ -79,6 +79,7 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
             try {
                 workerThread.join(logPollTimeMillis);
             } catch (InterruptedException e) {
+                addWarn(workerThread.getName() + " interrupted", e);
             }
             workerThread.interrupt();
             workerThread = null;
@@ -105,26 +106,32 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
         }
     }
 
+    @SuppressWarnings("unused")
     public void setAwsRegionName(String awsRegionName) {
         this.awsRegionName = awsRegionName;
     }
 
+    @SuppressWarnings("unused")
     public void setCreateLogGroup(String createLogGroup) {
         this.createLogGroup = createLogGroup;
     }
 
+    @SuppressWarnings("unused")
     public void setLogGroupName(String logGroupName) {
         this.logGroupName = logGroupName;
     }
 
+    @SuppressWarnings("unused")
     public void setLogStreamName(String logStreamName) {
         this.logStreamName = logStreamName;
     }
 
+    @SuppressWarnings("unused")
     public void setMaxLogSize(String maxLogSize) {
         this.maxLogSize = Integer.valueOf(maxLogSize);
     }
 
+    @SuppressWarnings("unused")
     public void setLogPollTimeMillis(String logPollTimeMillis) {
         this.logPollTimeMillis = Long.valueOf(logPollTimeMillis);
     }
@@ -164,7 +171,7 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
 
                 // Last log submission time
                 long lastSubmit = System.currentTimeMillis();
-                // cloudwatch sequence token
+                // Cloudwatch sequence token
                 String lastSequenceToken = null;
                 while (isStarted()) {
                     long pollRemainTime = lastSubmit + logPollTimeMillis - System.currentTimeMillis();
