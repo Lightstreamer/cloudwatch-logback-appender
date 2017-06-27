@@ -25,6 +25,8 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
 
     private String awsRegionName;
 
+    private String createLogGroup = "false";
+
     private String logGroupName = "test-log-group";
 
     private String logStreamName;
@@ -64,20 +66,6 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
             awsLogsClient.setRegion(Region.getRegion(Regions.fromName(awsRegionName)));
         }
 
-        CreateLogGroupRequest createLogGroupRequest = new CreateLogGroupRequest(logGroupName);
-        try {
-            awsLogsClient.createLogGroup(createLogGroupRequest);
-        } catch (ResourceAlreadyExistsException e) {
-            addInfo("Log group " + logGroupName + "already exists");
-        }
-
-        CreateLogStreamRequest createLogStreamRequest = new CreateLogStreamRequest(logGroupName, logStreamName);
-        try {
-            awsLogsClient.createLogStream(createLogStreamRequest);
-        } catch (ResourceAlreadyExistsException e) {
-            addInfo("Log stream " + logStreamName + "already exists", e);
-        }
-
         logEvents = new ArrayBlockingQueue<>(maxLogSize * 2);
     }
 
@@ -102,12 +90,12 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
     protected void append(ILoggingEvent eventObject) {
         try {
             logEvents.offer(LogbackUtils.iLoggingEvent2Map(eventObject));
+
             // start worker
-            if (workerThread == null) {
+            if (workerThread == null || !workerThread.isAlive()) {
                 synchronized (this) {
-                    if (workerThread == null) {
+                    if (workerThread == null || !workerThread.isAlive()) {
                         workerThread = new WorkerThread(getClass().getSimpleName() + ' ' + getName());
-                        addInfo(getClass().getSimpleName() + " starting thread " + workerThread.getName());
                         workerThread.start();
                     }
                 }
@@ -119,6 +107,10 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
 
     public void setAwsRegionName(String awsRegionName) {
         this.awsRegionName = awsRegionName;
+    }
+
+    public void setCreateLogGroup(String createLogGroup) {
+        this.createLogGroup = createLogGroup;
     }
 
     public void setLogGroupName(String logGroupName) {
@@ -152,6 +144,24 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
         public void run() {
             assert isStarted();
             try {
+                addInfo(getClass().getSimpleName() + " starting thread " + workerThread.getName());
+
+                if (Boolean.parseBoolean(createLogGroup)) {
+                    CreateLogGroupRequest createLogGroupRequest = new CreateLogGroupRequest(logGroupName);
+                    try {
+                        awsLogsClient.createLogGroup(createLogGroupRequest);
+                    } catch (ResourceAlreadyExistsException e) {
+                        addInfo("Log group " + logGroupName + "already exists");
+                    }
+                }
+
+                CreateLogStreamRequest createLogStreamRequest = new CreateLogStreamRequest(logGroupName, logStreamName);
+                try {
+                    awsLogsClient.createLogStream(createLogStreamRequest);
+                } catch (ResourceAlreadyExistsException e) {
+                    addInfo("Log stream " + logStreamName + "already exists", e);
+                }
+
                 // Last log submission time
                 long lastSubmit = System.currentTimeMillis();
                 // cloudwatch sequence token
@@ -194,6 +204,8 @@ public final class AwsLogsJsonAppender extends UnsynchronizedAppenderBase<ILoggi
                     // always update polling time
                     lastSubmit = System.currentTimeMillis();
                 }
+            } catch (Exception e) {
+                addError("Cloudwatch appender thread error", e);
             } finally {
                 addInfo(getClass().getSimpleName() + " stopped thread " + Thread.currentThread().getName());
             }

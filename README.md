@@ -51,11 +51,12 @@ else it waits for *maxLogSize* data in FIFO or for *logPollTimeMillis* timeout.
 
 #### Properties:
 
-| Property      | Required  | Description                                        |
-| :------------ | :-------: | :------------------------------------------------- |
-| awsRegionName | no        | CloudWatch region name.                            |
-| logGroupName  | no        | CloudWatch log group name. Default: test-log-group |
-| logStreamName | no        | CloudWatch stream name. Default: hostName+timeStamp|
-| logPollTimeMillis | no    | Log polling time in milliseconds. Default: 3000    |
-| minLogSize    | no        | Min event for wait polling. Default: 128           |
-| maxLogSize    | no        | Max events in putLogEvents. Default: 1024          |
+| Property       | Required  | Description                                        |
+| :------------- | :-------: | :------------------------------------------------- |
+| awsRegionName  | no        | CloudWatch region name.                            |
+| createLogGroup | no        | Create log group if missing. Default: false |
+| logGroupName   | no        | CloudWatch log group name. Default: test-log-group |
+| logStreamName  | no        | CloudWatch stream name. Default: hostName+timeStamp|
+| logPollTimeMillis | no     | Log polling time in milliseconds. Default: 3000    |
+| minLogSize     | no        | Min event for wait polling. Default: 128           |
+| maxLogSize     | no        | Max events in putLogEvents. Default: 1024          |
